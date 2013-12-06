@@ -1,6 +1,6 @@
 /*globals initTestDB: false, emit: true, generateAdapterUrl: false, strictEqual: false */
 /*globals PERSIST_DATABASES: false, initDBPair: false, utils: true */
-/*globals ajax: true, LevelPouch: true */
+/*globals Pouch.ajax: true, LevelPouch: true */
 /*globals cleanupTestDatabases: false */
 
 "use strict";
@@ -54,7 +54,7 @@ adapters.map(function(adapters) {
             remote.get(doc._id, {revs_info:true},function(err, data) {
               var correctRev = data._revs_info[0];
               local.replicate.from(remote, function(err, results) {
-                // Check the PouchDB doc.
+                // Check the Pouch doc.
                 local.get(doc._id, function(err, results) {
                   strictEqual(results._rev, correctRev.rev,
                               'correct rev stored after replication');

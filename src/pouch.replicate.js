@@ -1,35 +1,30 @@
-/*globals PouchUtils: true */
-
 'use strict';
 
-var PouchUtils;
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Pouch;
-  PouchUtils = require('./pouch.utils.js');
-}
+var PouchUtils = require('./pouch.utils.js');
+var Pouch = require('./pouch');
 
 // We create a basic promise so the caller can cancel the replication possibly
 // before we have actually started listening to changes etc
-var Promise = function() {
+function Promise() {
+  var that = this;
   this.cancelled = false;
-  this.cancel = function() {
-    this.cancelled = true;
+  this.cancel = function () {
+    that.cancelled = true;
   };
-};
+}
 
 // The RequestManager ensures that only one database request is active at
 // at time, it ensures we dont max out simultaneous HTTP requests and makes
 // the replication process easier to reason about
-var RequestManager = function() {
 
+function RequestManager(promise) {
   var queue = [];
   var api = {};
   var processing = false;
 
   // Add a new request to the queue, if we arent currently processing anything
   // then process it immediately
-  api.enqueue = function(fun, args) {
+  api.enqueue = function (fun, args) {
     queue.push({fun: fun, args: args});
     if (!processing) {
       api.process();
@@ -37,8 +32,8 @@ var RequestManager = function() {
   };
 
   // Process the next request
-  api.process = function() {
-    if (processing || !queue.length) {
+  api.process = function () {
+    if (processing || !queue.length || promise.cancelled) {
       return;
     }
     processing = true;
@@ -48,28 +43,30 @@ var RequestManager = function() {
 
   // We need to be notified whenever a request is complete to process
   // the next request
-  api.notifyRequestComplete = function() {
+  api.notifyRequestComplete = function () {
     processing = false;
     api.process();
   };
 
   return api;
-};
+}
 
 // TODO: check CouchDB's replication id generation, generate a unique id particular
 // to this replication
-var genReplicationId = function(src, target, opts) {
+
+function genReplicationId(src, target, opts) {
   var filterFun = opts.filter ? opts.filter.toString() : '';
   return '_local/' + PouchUtils.Crypto.MD5(src.id() + target.id() + filterFun);
-};
+}
 
 // A checkpoint lets us restart replications from when they were last cancelled
-var fetchCheckpoint = function(src, target, id, callback) {
-  target.get(id, function(err, targetDoc) {
+
+function fetchCheckpoint(src, target, id, callback) {
+  target.get(id, function (err, targetDoc) {
     if (err && err.status === 404) {
       callback(null, 0);
     } else {
-      src.get(id, function(err, sourceDoc) {
+      src.get(id, function (err, sourceDoc) {
         if (err && err.status === 404 || targetDoc.last_seq !== sourceDoc.last_seq) {
           callback(null, 0);
         } else {
@@ -78,23 +75,28 @@ var fetchCheckpoint = function(src, target, id, callback) {
       });
     }
   });
-};
+}
 
-var writeCheckpoint = function(src, target, id, checkpoint, callback) {
-  var check = {
-    _id: id,
-    last_seq: checkpoint
-  };
-  target.put(check, function(err, doc) {
-    src.put(check, function(err, doc) {
+function writeCheckpoint(src, target, id, checkpoint, callback) {
+  function updateCheckpoint(db, callback) {
+    db.get(id, function (err, doc) {
+      if (err && err.status === 404) {
+        doc = {_id: id};
+      }
+      doc.last_seq = checkpoint;
+      db.put(doc, callback);
+    });
+  }
+  updateCheckpoint(target, function (err, doc) {
+    updateCheckpoint(src, function (err, doc) {
       callback();
     });
   });
-};
+}
 
 function replicate(src, target, opts, promise) {
 
-  var requests = new RequestManager();
+  var requests = new RequestManager(promise);
   var writeQueue = [];
   var repId = genReplicationId(src, target, opts);
   var results = [];
@@ -120,7 +122,7 @@ function replicate(src, target, opts, promise) {
     pendingRevs -= len;
     result.docs_written += len;
 
-    writeCheckpoint(src, target, repId, last_seq, function(err, res) {
+    writeCheckpoint(src, target, repId, last_seq, function (err, res) {
       requests.notifyRequestComplete();
       isCompleted();
     });
@@ -131,14 +133,14 @@ function replicate(src, target, opts, promise) {
       return requests.notifyRequestComplete();
     }
     var len = writeQueue.length;
-    target.bulkDocs({docs: writeQueue}, {new_edits: false}, function(err, res) {
+    target.bulkDocs({docs: writeQueue}, {new_edits: false}, function (err, res) {
       docsWritten(err, res, len);
     });
     writeQueue = [];
   }
 
   function eachRev(id, rev) {
-    src.get(id, {revs: true, rev: rev, attachments: true}, function(err, doc) {
+    src.get(id, {revs: true, rev: rev, attachments: true}, function (err, doc) {
       result.docs_read++;
       requests.notifyRequestComplete();
       writeQueue.push(doc);
@@ -186,7 +188,7 @@ function replicate(src, target, opts, promise) {
     last_seq = change.seq;
     results.push(change);
     var diff = {};
-    diff[change.id] = change.changes.map(function(x) { return x.rev; });
+    diff[change.id] = change.changes.map(function (x) { return x.rev; });
     var counts = {};
     counts[change.id] = change.changes.length;
     pendingRevs += change.changes.length;
@@ -205,7 +207,7 @@ function replicate(src, target, opts, promise) {
     }
   }
 
-  fetchCheckpoint(src, target, repId, function(err, checkpoint) {
+  fetchCheckpoint(src, target, repId, function (err, checkpoint) {
 
     if (err) {
       return PouchUtils.call(opts.complete, err);
@@ -239,7 +241,11 @@ function replicate(src, target, opts, promise) {
     var changes = src.changes(repOpts);
 
     if (opts.continuous) {
-      promise.cancel = changes.cancel;
+      var cancel = promise.cancel;
+      promise.cancel = function () {
+        cancel();
+        changes.cancel();
+      };
     }
   });
 
@@ -252,7 +258,7 @@ function toPouch(db, callback) {
   callback(null, db);
 }
 
-Pouch.replicate = function(src, target, opts, callback) {
+exports.replicate = function (src, target, opts, callback) {
   if (opts instanceof Function) {
     callback = opts;
     opts = {};
@@ -264,15 +270,25 @@ Pouch.replicate = function(src, target, opts, callback) {
     opts.complete = callback;
   }
   var replicateRet = new Promise();
-  toPouch(src, function(err, src) {
+  toPouch(src, function (err, src) {
     if (err) {
       return PouchUtils.call(callback, err);
     }
-    toPouch(target, function(err, target) {
+    toPouch(target, function (err, target) {
       if (err) {
         return PouchUtils.call(callback, err);
       }
-      replicate(src, target, opts, replicateRet);
+      if (opts.server) {
+        if (typeof src.replicateOnServer !== 'function') {
+          return PouchUtils.call(callback, { error: 'Server replication not supported for ' + src.type() + ' adapter' });
+        }
+        if (src.type() !== target.type()) {
+          return PouchUtils.call(callback, { error: 'Server replication for different adapter types (' + src.type() + ' and ' + target.type() + ') is not supported' });
+        }
+        src.replicateOnServer(target, opts, replicateRet);
+      } else {
+        replicate(src, target, opts, replicateRet);
+      }
     });
   });
   return replicateRet;

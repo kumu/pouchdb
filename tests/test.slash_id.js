@@ -1,6 +1,6 @@
 /*globals initTestDB: false, emit: true, generateAdapterUrl: false */
 /*globals PERSIST_DATABASES: false, initDBPair: false, utils: true, strictEqual: false */
-/*globals ajax: true, LevelPouch: true, makeDocs: false */
+/*globals Pouch.ajax: true, LevelPouch: true, makeDocs: false */
 /*globals readBlob: false, makeBlob: false, base64Blob: false */
 /*globals cleanupTestDatabases: false */
 
@@ -80,7 +80,7 @@ adapters.map(function(adapter) {
         {_id: 'part/doc2', int: 2, _attachments: {
           'attachment/with/slash': {
             content_type: 'text/plain',
-            data: PouchUtils.btoa('some data')
+            data: 'c29tZSBkYXRh'
           }
         }},
         {_id: 'part/doc3', int: 3}

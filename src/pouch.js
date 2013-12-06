@@ -1,14 +1,8 @@
-/*globals PouchAdapter: true, PouchUtils: true */
-
 "use strict";
 
-var PouchUtils;
-
-if (typeof module !== 'undefined' && module.exports) {
-  PouchUtils = require('./pouch.utils.js');
-}
-
-var Pouch = function Pouch(name, opts, callback) {
+var PouchUtils = require('./pouch.utils.js');
+var PouchAdapter = require('./pouch.adapter.js')(Pouch);
+function Pouch(name, opts, callback) {
 
   if (!(this instanceof Pouch)) {
     return new Pouch(name, opts, callback);
@@ -25,7 +19,7 @@ var Pouch = function Pouch(name, opts, callback) {
   }
 
   if (typeof callback === 'undefined') {
-    callback = function() {};
+    callback = function () {};
   }
 
   var backend = Pouch.parseAdapter(opts.name || name);
@@ -41,7 +35,7 @@ var Pouch = function Pouch(name, opts, callback) {
     throw 'Invalid Adapter';
   }
 
-  var adapter = new PouchAdapter(opts, function(err, db) {
+  var adapter = new PouchAdapter(opts, function (err, db) {
     if (err) {
       if (callback) {
         callback(err);
@@ -80,16 +74,14 @@ var Pouch = function Pouch(name, opts, callback) {
       }
     }
   }
-};
+}
 
-Pouch.DEBUG = false;
-Pouch.openReqList = {};
 Pouch.adapters = {};
 Pouch.plugins = {};
 
 Pouch.prefix = '_pouch_';
 
-Pouch.parseAdapter = function(name) {
+Pouch.parseAdapter = function (name) {
   var match = name.match(/([a-z\-]*):\/\/(.*)/);
   var adapter;
   if (match) {
@@ -118,7 +110,7 @@ Pouch.parseAdapter = function(name) {
   throw 'No valid adapter found';
 };
 
-Pouch.destroy = function(name, opts, callback) {
+Pouch.destroy = function (name, opts, callback) {
   if (typeof opts === 'function' || typeof opts === 'undefined') {
     callback = opts;
     opts = {};
@@ -130,11 +122,11 @@ Pouch.destroy = function(name, opts, callback) {
   }
 
   if (typeof callback === 'undefined') {
-    callback = function() {};
+    callback = function () {};
   }
   var backend = Pouch.parseAdapter(opts.name || name);
 
-  var cb = function(err, response) {
+  var cb = function (err, response) {
     if (err) {
       callback(err);
       return;
@@ -143,9 +135,7 @@ Pouch.destroy = function(name, opts, callback) {
     for (var plugin in Pouch.plugins) {
       Pouch.plugins[plugin]._delete(backend.name);
     }
-    if (Pouch.DEBUG) {
-      console.log(backend.name + ': Delete Database');
-    }
+    //console.log(backend.name + ': Delete Database');
 
     // call destroy method of the particular adaptor
     Pouch.adapters[backend.adapter].destroy(backend.name, opts, callback);
@@ -155,7 +145,7 @@ Pouch.destroy = function(name, opts, callback) {
   Pouch.removeFromAllDbs(backend, cb);
 };
 
-Pouch.removeFromAllDbs = function(opts, callback) {
+Pouch.removeFromAllDbs = function (opts, callback) {
   // Only execute function if flag is enabled
   if (!Pouch.enableAllDbs) {
     callback();
@@ -170,22 +160,22 @@ Pouch.removeFromAllDbs = function(opts, callback) {
   }
 
   // remove db from Pouch.ALL_DBS
-  new Pouch(Pouch.allDBName(opts.adapter), function(err, db) {
+  new Pouch(Pouch.allDBName(opts.adapter), function (err, db) {
     if (err) {
       // don't fail when allDbs fail
-      console.error(err);
+      //console.error(err);
       callback();
       return;
     }
     // check if db has been registered in Pouch.ALL_DBS
     var dbname = Pouch.dbName(opts.adapter, opts.name);
-    db.get(dbname, function(err, doc) {
+    db.get(dbname, function (err, doc) {
       if (err) {
         callback();
       } else {
-        db.remove(doc, function(err, response) {
+        db.remove(doc, function (err, response) {
           if (err) {
-            console.error(err);
+            //console.error(err);
           }
           callback();
         });
@@ -201,7 +191,7 @@ Pouch.adapter = function (id, obj) {
   }
 };
 
-Pouch.plugin = function(id, obj) {
+Pouch.plugin = function (id, obj) {
   Pouch.plugins[id] = obj;
 };
 
@@ -210,17 +200,17 @@ Pouch.enableAllDbs = false;
 
 // name of database used to keep track of databases
 Pouch.ALL_DBS = "_allDbs";
-Pouch.dbName = function(adapter, name) {
+Pouch.dbName = function (adapter, name) {
   return [adapter, "-", name].join('');
 };
-Pouch.realDBName = function(adapter, name) {
+Pouch.realDBName = function (adapter, name) {
   return [adapter, "://", name].join('');
 };
-Pouch.allDBName = function(adapter) {
+Pouch.allDBName = function (adapter) {
   return [adapter, "://", Pouch.prefix + Pouch.ALL_DBS].join('');
 };
 
-Pouch.open = function(opts, callback) {
+Pouch.open = function (opts, callback) {
   // Only register pouch with allDbs if flag is enabled
   if (!Pouch.enableAllDbs) {
     callback();
@@ -234,28 +224,28 @@ Pouch.open = function(opts, callback) {
     return;
   }
 
-  new Pouch(Pouch.allDBName(adapter), function(err, db) {
+  new Pouch(Pouch.allDBName(adapter), function (err, db) {
     if (err) {
       // don't fail when allDb registration fails
-      console.error(err);
+      //console.error(err);
       callback();
       return;
     }
 
     // check if db has been registered in Pouch.ALL_DBS
     var dbname = Pouch.dbName(adapter, opts.name);
-    db.get(dbname, function(err, response) {
+    db.get(dbname, function (err, response) {
       if (err && err.status === 404) {
         db.put({
           _id: dbname,
           dbname: opts.originalName
-        }, function(err) {
+        }, function (err) {
             if (err) {
-                console.error(err);
+              //console.error(err);
             }
 
             callback();
-        });
+          });
       } else {
         callback();
       }
@@ -263,13 +253,13 @@ Pouch.open = function(opts, callback) {
   });
 };
 
-Pouch.allDbs = function(callback) {
-  var accumulate = function(adapters, all_dbs) {
+Pouch.allDbs = function (callback) {
+  var accumulate = function (adapters, all_dbs) {
     if (adapters.length === 0) {
       // remove duplicates
       var result = [];
-      all_dbs.forEach(function(doc) {
-        var exists = result.some(function(db) {
+      all_dbs.forEach(function (doc) {
+        var exists = result.some(function (db) {
           return db.id === doc.id;
         });
 
@@ -279,9 +269,9 @@ Pouch.allDbs = function(callback) {
       });
 
       // return an array of dbname
-      callback(null, result.map(function(row) {
+      callback(null, result.map(function (row) {
           return row.doc.dbname;
-      }));
+        }));
       return;
     }
 
@@ -293,12 +283,12 @@ Pouch.allDbs = function(callback) {
       return;
     }
 
-    new Pouch(Pouch.allDBName(adapter), function(err, db) {
+    new Pouch(Pouch.allDBName(adapter), function (err, db) {
       if (err) {
         callback(err);
         return;
       }
-      db.allDocs({include_docs: true}, function(err, response) {
+      db.allDocs({include_docs: true}, function (err, response) {
         if (err) {
           callback(err);
           return;
@@ -308,9 +298,9 @@ Pouch.allDbs = function(callback) {
         all_dbs.unshift.apply(all_dbs, response.rows);
 
         // code to clear allDbs.
-        // response.rows.forEach(function(row) {
-        //   db.remove(row.doc, function() {
-        //     console.log(arguments);
+        // response.rows.forEach(function (row) {
+        //   db.remove(row.doc, function () {
+        //     //console.log(arguments);
         //   });
         // });
 
@@ -323,135 +313,28 @@ Pouch.allDbs = function(callback) {
   accumulate(adapters, []);
 };
 
-/*
-  Examples:
-
-  >>> Pouch.uuids()
-  "92329D39-6F5C-4520-ABFC-AAB64544E172"]
-
-  >>> Pouch.uuids(10, {length: 32, radix: 5})
-  [ '04422200002240221333300140323100',
-    '02304411022101001312440440020110',
-    '41432430322114143303343433433030',
-    '21234330022303431304443100330401',
-    '23044133434242034101422131301213',
-    '43142032223224403322031032232041',
-    '41121132424023141101403324200330',
-    '00341042023103204342124004122342',
-    '01001141433040113422403034004214',
-    '30221232324132303123433131020020' ]
- */
-Pouch.uuids = function (count, options) {
-
-  if (typeof(options) !== 'object') {
-    options = {};
-  }
-
-  var length = options.length;
-  var radix = options.radix;
-  var uuids = [];
-
-  while (uuids.push(PouchUtils.uuid(length, radix)) < count) { }
-
-  return uuids;
-};
-
-// Give back one UUID
-Pouch.uuid = function (options) {
-  return Pouch.uuids(1, options)[0];
-};
-
 // Enumerate errors, add the status code so we can reflect the HTTP api
 // in future
-Pouch.Errors = {
-  MISSING_BULK_DOCS: {
-    status: 400,
-    error: 'bad_request',
-    reason: "Missing JSON list of 'docs'"
-  },
-  MISSING_DOC: {
-    status: 404,
-    error: 'not_found',
-    reason: 'missing'
-  },
-  REV_CONFLICT: {
-    status: 409,
-    error: 'conflict',
-    reason: 'Document update conflict'
-  },
-  INVALID_ID: {
-    status: 400,
-    error: 'invalid_id',
-    reason: '_id field must contain a string'
-  },
-  MISSING_ID: {
-    status: 412,
-    error: 'missing_id',
-    reason: '_id is required for puts'
-  },
-  RESERVED_ID: {
-    status: 400,
-    error: 'bad_request',
-    reason: 'Only reserved document ids may start with underscore.'
-  },
-  NOT_OPEN: {
-    status: 412,
-    error: 'precondition_failed',
-    reason: 'Database not open so cannot close'
-  },
-  UNKNOWN_ERROR: {
-    status: 500,
-    error: 'unknown_error',
-    reason: 'Database encountered an unknown error'
-  },
-  BAD_ARG: {
-    status: 500,
-    error: 'badarg',
-    reason: 'Some query argument is invalid'
-  },
-  INVALID_REQUEST: {
-    status: 400,
-    error: 'invalid_request',
-    reason: 'Request was invalid'
-  },
-  QUERY_PARSE_ERROR: {
-    status: 400,
-    error: 'query_parse_error',
-    reason: 'Some query parameter is invalid'
-  },
-  DOC_VALIDATION: {
-    status: 500,
-    error: 'doc_validation',
-    reason: 'Bad special document member'
-  },
-  BAD_REQUEST: {
-    status: 400,
-    error: 'bad_request',
-    reason: 'Something wrong with the request'
-  },
-  NOT_AN_OBJECT: {
-    status: 400,
-    error: 'bad_request',
-    reason: 'Document must be a JSON object'
-  }
-};
 
-Pouch.error = function(error, reason) {
-  return PouchUtils.extend({}, error, {reason: reason});
-};
 
-if (typeof module !== 'undefined' && module.exports) {
-  global.Pouch = Pouch;
-  global.PouchDB = Pouch;
-  module.exports = Pouch;
-  Pouch.replicate = require('./pouch.replicate.js').replicate;
-  var PouchAdapter = require('./pouch.adapter.js');
-  require('./adapters/pouch.http.js');
-  require('./adapters/pouch.idb.js');
-  require('./adapters/pouch.websql.js');
-  require('./adapters/pouch.leveldb.js');
-  require('./plugins/pouchdb.mapreduce.js');
-} else {
-  window.Pouch = Pouch;
-  window.PouchDB = Pouch;
+module.exports = Pouch;
+
+Pouch.ajax = require('./deps/ajax');
+Pouch.extend = require('./deps/extend');
+Pouch.utils = PouchUtils;
+Pouch.Errors = require('./deps/errors');
+Pouch.replicate = require('./pouch.replicate.js').replicate;
+Pouch.version = require('./version');
+var httpAdapter = require('./adapters/pouch.http.js');
+Pouch.adapter('http', httpAdapter);
+Pouch.adapter('https', httpAdapter);
+
+Pouch.adapter('idb', require('./adapters/pouch.idb.js'));
+Pouch.adapter('websql', require('./adapters/pouch.websql.js'));
+Pouch.plugin('mapreduce', require('pouchdb-mapreduce'));
+
+if (!process.browser) {
+  var ldbAdapter = require('./adapters/pouch.leveldb.js');
+  Pouch.adapter('ldb', ldbAdapter);
+  Pouch.adapter('leveldb', ldbAdapter);
 }

@@ -1,5 +1,5 @@
 /*globals initTestDB, openTestDB, emit, generateAdapterUrl, cleanupTestDatabases */
-/*globals PERSIST_DATABASES, initDBPair, ajax, strictEqual */
+/*globals PERSIST_DATABASES, initDBPair, Pouch.ajax, strictEqual */
 /*globals utils: true, LevelPouch: true */
 
 "use strict";
@@ -7,12 +7,10 @@
 var adapters = ['http-1', 'local-1'];
 var qunit = module;
 var LevelPouch;
-var PouchDB;
 var utils;
 
 if (typeof module !== undefined && module.exports) {
   Pouch = require('../src/pouch.js');
-  PouchDB = require('../src/pouch.js');
   LevelPouch = require('../src/adapters/pouch.leveldb.js');
   utils = require('./test.utils.js');
 
@@ -21,7 +19,7 @@ if (typeof module !== undefined && module.exports) {
   }
   qunit = QUnit.module;
 }
-
+var PouchDB = Pouch;
 adapters.map(function(adapter) {
 
   qunit("basics: " + adapter, {
@@ -409,7 +407,7 @@ adapters.map(function(adapter) {
   });
 
   test('Error works', 1, function() {
-    deepEqual(Pouch.error(Pouch.Errors.BAD_REQUEST, "love needs no reason"),
+    deepEqual(Pouch.utils.error(Pouch.Errors.BAD_REQUEST, "love needs no reason"),
       {status: 400, error: "bad_request", reason: "love needs no reason"},
       "should be the same");
   });

@@ -8,8 +8,12 @@
   "undef": true,
   "eqnull": true,
   "browser": true,
+  "node": true,
   "strict": true,
   "globalstrict": true,
+  "globals": { "Pouch": true},
+  "white": true,
+  "indent": 2,
   "predef": [
     "QUnit",
     "asyncTest",
@@ -30,7 +34,6 @@
     "process",
     "global",
     "require",
-    "console",
-    "Pouch"
+    "console"
   ]
 }

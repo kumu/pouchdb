@@ -1,9 +1,9 @@
 {
   "name": "pouchdb",
-  "release": "nightly",
-  "description": "PouchDB is a pocket-sized database.",
-  "author": "Dale Harvey",
   "version": "0.0.0",
+  "description": "PouchDB is a pocket-sized database.",
+  "release": "nightly",
+  "author": "Dale Harvey",
   "main": "./src/pouch.js",
   "homepage": "https://github.com/daleharvey/pouchdb",
   "repository": "https://github.com/daleharvey/pouchdb",
@@ -18,39 +18,22 @@
     "pouchdb"
   ],
   "dependencies": {
-    "level": "*",
-    "request": "*"
-  },
-  "jam": {
-    "main": "dist/pouchdb.amd-nightly.js",
-    "include": [
-      "dist/pouchdb.amd-nightly.js",
-      "README.md",
-      "LICENSE"
-    ],
-    "dependencies": {
-      "simple-uuid": null,
-      "md5": null
-    }
+    "level": "~0.18.0",
+    "request": "~2.28.0",
+    "pouchdb-mapreduce": "0.2.0"
   },
   "devDependencies": {
-    "wd": "*",
-    "commander": "*",
-    "colors": "*",
-    "assert": "*",
-    "nano": "*",
-    "send": "*",
-    "grunt": "~0.4",
-    "grunt-saucelabs": "~4.0",
-    "grunt-node-qunit": "~2.0",
-    "corsproxy": "*",
-    "http-proxy": "*",
-    "grunt-contrib-connect": "~0.1.2",
-    "grunt-contrib-concat": "~0.1.3",
-    "grunt-contrib-uglify": "~0.1.1",
-    "grunt-contrib-jshint": "~0.1.1",
-    "grunt-contrib-clean": "~0.4.0",
-    "grunt-contrib-watch": "~0.2.0"
+    "commander": "~2.1.0",
+    "webdriverjs": "~0.7.14",
+    "watchify": "~0.4.1",
+    "uglify-js": "~2.4.6",
+    "jshint": "~2.3.0",
+    "http-proxy": "~0.10.3",
+    "corsproxy": "~0.2.13",
+    "http-server": "~0.5.5",
+    "qunit": "~0.5.17",
+    "browserify": "~2.36.1",
+    "tin": "~0.3.1"
   },
   "maintainers": [
     {
@@ -63,11 +46,20 @@
     }
   ],
   "scripts": {
-    "test": "grunt test-travis"
+    "jshint": "jshint -c .jshintrc src/*.js src/adapters/*.js",
+    "build-js": "mkdir -p dist && browserify src/pouch.js -s Pouch -o dist/pouchdb-nightly.js",
+    "watch-js": "mkdir -p dist && watchify src/pouch.js -s Pouch -o dist/pouchdb-nightly.js",
+    "uglify": "uglifyjs dist/pouchdb-nightly.js -mc > dist/pouchdb-nightly.min.js",
+    "build": "npm run build-js && npm run uglify",
+    "test-node": "./bin/test-node.js",
+    "test-browser": "npm run build-js && ./bin/test-browser.js",
+    "dev-server": "npm run watch-js & ./bin/dev-server.js",
+    "test": "npm run jshint && npm run test-node"
   },
   "browser": {
-    "request": false,
     "./adapters/pouch.leveldb.js": false,
+    "./deps/buffer": false,
+    "request": false,
     "level": false,
     "path": false,
     "fs": false,

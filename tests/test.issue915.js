@@ -4,15 +4,16 @@
 
 "use strict";
 
-var adapter = 'http-1';
 var qunit = module;
 var LevelPouch;
 var utils;
+var fs;
 
 if (typeof module !== undefined && module.exports) {
   Pouch = require('../src/pouch.js');
   LevelPouch = require('../src/adapters/pouch.leveldb.js');
   utils = require('./test.utils.js');
+  fs = require('fs');
 
   for (var k in utils) {
     global[k] = global[k] || utils[k];
@@ -20,14 +21,14 @@ if (typeof module !== undefined && module.exports) {
   qunit = QUnit.module;
 }
 
-qunit("http-adapter", {
+qunit("Remove DB", {
   setup: function() {
-    this.name = generateAdapterUrl(adapter);
+    //Create a dir
+    fs.mkdirSync('veryimportantfiles');
   },
   teardown: function() {
-    if (!PERSIST_DATABASES) {
-      Pouch.destroy(this.name);
-    }
+      Pouch.destroy('name');
+      fs.rmdirSync('veryimportantfiles');
   }
 });
 
@@ -35,13 +36,12 @@ qunit("http-adapter", {
 
 asyncTest("Create a pouch without DB setup", function() {
   var instantDB;
-  var name = this.name;
-  Pouch.destroy(name, function() {
-    instantDB = new Pouch(name, {skipSetup: true});
-    instantDB.post({test:"abc"}, function(err, info) {
-      ok(err && err.error === 'not_found', 'Skipped setup of database');
-      start();
-    });
+  instantDB = new Pouch('name', {skipSetup: true}, function() {
+    Pouch.destroy('veryimportantfiles', function( error, response ) {
+        equal(error.reason, 'Database not found', 'should return Database not found error');
+        equal(fs.existsSync('veryimportantfiles'), true, 'veryimportantfiles was not removed');
+        start();
+      });
   });
 });
 
