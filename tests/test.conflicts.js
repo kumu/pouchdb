@@ -1,57 +1,45 @@
-/*globals initTestDB: false, emit: true, generateAdapterUrl: false */
-/*globals PERSIST_DATABASES: false, initDBPair: false, utils: true */
-/*globals Pouch.ajax: true, LevelPouch: true */
-/*globals cleanupTestDatabases: false */
+'use strict';
 
-"use strict";
+var adapters = ['http', 'local'];
 
-var adapters = ['http-1', 'local-1'];
-var qunit = module;
-var LevelPouch;
-var utils;
+adapters.map(function (adapter) {
+  describe('test.conflicts.js-' + adapter, function () {
 
-if (typeof module !== undefined && module.exports) {
-  Pouch = require('../src/pouch.js');
-  LevelPouch = require('../src/adapters/pouch.leveldb.js');
-  utils = require('./test.utils.js');
+    var dbs = {};
 
-  for (var k in utils) {
-    global[k] = global[k] || utils[k];
-  }
-  qunit = QUnit.module;
-}
+    beforeEach(function (done) {
+      dbs.name = testUtils.adapterUrl(adapter, 'test_conflicts');
+      testUtils.cleanup([dbs.name], done);
+    });
 
-adapters.map(function(adapter) {
+    afterEach(function (done) {
+      testUtils.cleanup([dbs.name], done);
+    });
 
-  qunit('conflicts: ' + adapter, {
-    setup : function () {
-      this.name = generateAdapterUrl(adapter);
-      Pouch.enableAllDbs = true;
-    },
-    teardown: cleanupTestDatabases
-  });
 
-  asyncTest('Testing conflicts', function() {
-    initTestDB(this.name, function(err, db) {
-      var doc = {_id: 'foo', a:1, b: 1};
-      db.put(doc, function(err, res) {
+    it('Testing conflicts', function (done) {
+      var db = new PouchDB(dbs.name);
+      var doc = {_id: 'foo', a: 1, b: 1};
+      db.put(doc, function (err, res) {
         doc._rev = res.rev;
-        ok(res.ok, 'Put first document');
-        db.get('foo', function(err, doc2) {
-          ok(doc._id === doc2._id && doc._rev && doc2._rev, 'Docs had correct id + rev');
+        should.exist(res.ok, 'Put first document');
+        db.get('foo', function (err, doc2) {
+          doc._id.should.equal(doc2._id);
+          doc.should.have.property('_rev');
+          doc2.should.have.property('_rev');
           doc.a = 2;
           doc2.a = 3;
-          db.put(doc, function(err, res) {
-            ok(res.ok, 'Put second doc');
-            db.put(doc2, function(err) {
-              ok(err.error === 'conflict', 'Put got a conflicts');
+          db.put(doc, function (err, res) {
+            should.exist(res.ok, 'Put second doc');
+            db.put(doc2, function (err) {
+              err.name.should.equal('conflict', 'Put got a conflicts');
               db.changes({
-                complete: function(err, results) {
-                  ok(results.results.length === 1, 'We have one entry in changes');
+                complete: function (err, results) {
+                  results.results.should.have.length(1);
                   doc2._rev = undefined;
-                  db.put(doc2, function(err) {
-                    ok(err.error === 'conflict', 'Another conflict');
-                    start();
+                  db.put(doc2, function (err) {
+                    err.name.should.equal('conflict', 'Another conflict');
+                    done();
                   });
                 }
               });
@@ -60,27 +48,24 @@ adapters.map(function(adapter) {
         });
       });
     });
-  });
 
-  asyncTest('Testing conflicts', function() {
-    var doc = {_id: 'fubar', a:1, b: 1};
-    initTestDB(this.name, function(err, db) {
-      db.put(doc, function(err, ndoc) {
+    it('Testing conflicts', function (done) {
+      var doc = {_id: 'fubar', a: 1, b: 1};
+      var db = new PouchDB(dbs.name);
+      db.put(doc, function (err, ndoc) {
         doc._rev = ndoc.rev;
-        db.remove(doc, function() {
+        db.remove(doc, function () {
           delete doc._rev;
-          db.put(doc, function(err, ndoc) {
+          db.put(doc, function (err, ndoc) {
             if (err) {
-              ok(false);
-              start();
-              return;
+              return done(err);
             }
-            ok(ndoc.ok, 'written previously deleted doc without rev');
-            start();
+            should.exist(ndoc.ok, 'written previously deleted doc without rev');
+            done();
           });
         });
       });
     });
-  });
 
+  });
 });

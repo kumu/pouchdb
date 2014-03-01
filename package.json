@@ -1,10 +1,9 @@
 {
   "name": "pouchdb",
-  "version": "0.0.0",
+  "version": "2.0.0-alpha",
   "description": "PouchDB is a pocket-sized database.",
   "release": "nightly",
-  "author": "Dale Harvey",
-  "main": "./src/pouch.js",
+  "main": "./lib/index.js",
   "homepage": "https://github.com/daleharvey/pouchdb",
   "repository": "https://github.com/daleharvey/pouchdb",
   "keywords": [
@@ -18,52 +17,52 @@
     "pouchdb"
   ],
   "dependencies": {
-    "level": "~0.18.0",
     "request": "~2.28.0",
-    "pouchdb-mapreduce": "0.2.0"
+    "pouchdb-mapreduce": "1.0.0",
+    "bluebird": "~1.0.0",
+    "level-sublevel": "~5.2.0",
+    "levelup": "~0.18.2",
+    "leveldown": "~0.10.2",
+    "inherits": "~2.0.1"
   },
   "devDependencies": {
     "commander": "~2.1.0",
-    "webdriverjs": "~0.7.14",
     "watchify": "~0.4.1",
     "uglify-js": "~2.4.6",
     "jshint": "~2.3.0",
     "http-proxy": "~0.10.3",
     "corsproxy": "~0.2.13",
     "http-server": "~0.5.5",
-    "qunit": "~0.5.17",
-    "browserify": "~2.36.1",
-    "tin": "~0.3.1"
+    "browserify": "~3.24.13",
+    "lie": "~2.5.2",
+    "wd": "~0.2.8",
+    "tin": "~0.4.0",
+    "qunit-mocha-ui": "0.0.5",
+    "mocha": "~1.17.1",
+    "chai": "~1.9.0",
+    "istanbul": "~0.2.4",
+    "ncp": "~0.5.0"
   },
-  "maintainers": [
-    {
-      "name": "Dale Harvey",
-      "web": "https://github.com/daleharvey"
-    },
-    {
-      "name": "Ryan Ramage",
-      "web": "https://github.com/ryanramage"
-    }
-  ],
   "scripts": {
-    "jshint": "jshint -c .jshintrc src/*.js src/adapters/*.js",
-    "build-js": "mkdir -p dist && browserify src/pouch.js -s Pouch -o dist/pouchdb-nightly.js",
-    "watch-js": "mkdir -p dist && watchify src/pouch.js -s Pouch -o dist/pouchdb-nightly.js",
+    "jshint": "jshint -c .jshintrc bin/ lib/ tests/*.js",
+    "build-js": "browserify lib/index.js -s PouchDB -o dist/pouchdb-nightly.js",
     "uglify": "uglifyjs dist/pouchdb-nightly.js -mc > dist/pouchdb-nightly.min.js",
-    "build": "npm run build-js && npm run uglify",
-    "test-node": "./bin/test-node.js",
-    "test-browser": "npm run build-js && ./bin/test-browser.js",
-    "dev-server": "npm run watch-js & ./bin/dev-server.js",
-    "test": "npm run jshint && npm run test-node"
+    "build": "mkdir -p dist && npm run build-js && npm run uglify",
+    "test-node": "./bin/run-mocha.sh",
+    "test-browser": "mkdir -p dist && npm run build-js && ./bin/test-browser.js",
+    "dev": "./bin/dev-server.js",
+    "test": "npm run jshint && ./bin/run-test.sh",
+    "publish": "./bin/publish.sh",
+    "publish-site": "./bin/publish-site.sh"
   },
   "browser": {
-    "./adapters/pouch.leveldb.js": false,
+    "./adapters/leveldb": false,
     "./deps/buffer": false,
     "request": false,
-    "level": false,
-    "path": false,
-    "fs": false,
-    "events": false,
-    "crypto": false
+    "levelup": false,
+    "leveldown": false,
+    "crypto": false,
+    "bluebird": "lie",
+    "level-sublevel": false
   }
 }

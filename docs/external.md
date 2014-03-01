@@ -23,15 +23,14 @@ An express submodule with a CouchDB style REST interface to PouchDB.
 
 Multidimensional and Spatial Queries with PouchDB.
 
-[Source](https://github.com/daleharvey/pouchdb/blob/master/src/plugins/pouchdb.spatial.js)
-[Build](http://download.pouchdb.com/pouchdb.spatial-nightly.js)
+[repo](https://github.com/pouchdb/geopouch)
 
 ### GQL
 
 Google Query Language(GQL) queries with PouchDB.
 
 [Documentation](http://pouchdb.com/gql.html)
-[Build](http://download.pouchdb.com/pouchdb.gql-nightly.js)
+[repo](https://github.com/pouchdb/GQL)
 
 ### Backbone PouchDB
 
@@ -45,3 +44,16 @@ A bookmarklet for inspecting PouchDB databases within the browser.
 
 [Website](http://puton.jit.su/)
 [Github](http://github.com/ymichael/puton)
+
+### PouchDroid
+
+Android adapter with a native Java interface to PouchDB.
+
+[Github](https://github.com/nolanlawson/PouchDroid/)
+
+### Revision Tree Visualizer
+
+A tool drawing revision tree of a couchdb document. You can see what is a conflict, which revisions are deleted and which is winning.
+
+[Website](http://neojski.github.io/visualizeRevTree)
+[Github](https://github.com/neojski/visualizeRevTree)

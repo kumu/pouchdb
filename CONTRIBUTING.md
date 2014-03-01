@@ -1,4 +1,4 @@
-[PouchDB](http://pouchdb.com/) - The Javascript Database that Syncs
+[PouchDB](http://pouchdb.com/) - The JavaScript Database that Syncs
 ==================================================
 
 Welcome, so you are thinking about contributing to PouchDB? awesome, this is a great place to start.
@@ -41,7 +41,7 @@ issue
 Dependencies
 --------------------------------------
 
-PouchDB needs the following to be able to build and test your build, if you havent installed them then best to do do so now, we will wait.
+PouchDB needs the following to be able to build and test your build, if you haven't installed them then best to do do so now, we will wait.
 
   * [Node.js](http://nodejs.org/)
   * [CouchDB](http://couchdb.apache.org/)
@@ -57,12 +57,14 @@ All dependancies installed? great, now building PouchDB itself is a breeze:
 
 You will now have various distributions of PouchDB in your `dist` folder, congratulations.
 
+ * If you are on windows, you will need `node-gyp` to install levelup, visit https://github.com/TooTallNate/node-gyp#installation for installation instructions.
+
 Running PouchDB Tests
 --------------------------------------
 
-The PouchDB test suite expects an instance of CouchDB running in Admin Party on http://127.0.0.1:5984, you can override this by passing a flag with the CouchDB host (and basic auth credentials if needed)
+The PouchDB test suite expects an instance of CouchDB running in Admin Party on http://127.0.0.1:5984, you can configure this by sending the `COUCH_HOST` env var.
 
-    $ ./bin/dev-server.js --remote=http://user:pass@myname.host.com
+ * PouchDB has been primarily developed on Linux and OSX, if you are using Windows then these instructions will have problems, we would love your help fixing them though.
 
 ### Node Tests
 
@@ -72,10 +74,36 @@ Run all tests with:
 
 ### Browser Tests
 
-    $ npm build
-    $ npm run dev-server
+Browser tests can be run automatically with:
 
-Now visit http://127.0.0.1:8000/tests/test.html in your browser add ?testFiles=test.basics.js to run single test file. You do not need to manually rebuild PouchDB when you run the `dev-server` target, any changes you make to the source will automatically be built.
+    $ CLIENT=firefox npm test
+
+or you can run:
+
+    $ npm run dev
+
+and open http://127.0.0.1:8000/tests/test.html in your browser of choice.
+
+### Test Options
+
+#### Subset of tests:
+
+    $ GREP=test.replication.js npm test
+
+or append `?grep=test.replication.js` if you opened the tests in a browser manually
+
+#### Test Coverage
+
+    $ COVERAGE=1 npm test
+
+#### Test alternative server
+
+    $ COUCH_HOST=http://user:pass@myname.host.com npm run dev
+
+or
+
+    $ COUCH_HOST=http://user:pass@myname.host.com npm test
+
 
 Git Essentials
 --------------------------------------
@@ -107,8 +135,9 @@ Committers!
 With great power comes great responsibility yada yada yada:
 
  * Code is peer reviewed, you should (almost) never push your own code.
- * Please dont accidently force push to master.
- * Cherry Pick / Rebase commits, dont use the big green button.
- * Ensure reviewed code follows the above contribution guidelines, if it doesnt feel free to ammend and make note.
+ * Please don't accidentally force push to master.
+ * Cherry Pick / Rebase commits, don't use the big green button.
+ * Ensure reviewed code follows the above contribution guidelines, if it doest feel free to amend and make note.
  * Please try to watch when Pull Requests are made and review and / or commit them in a timely manner.
+ * After you merge in a patch use tin to update the version accordingly. Run `tin -v x.x.x-prerelease` with x.x.x being the previous version upgraded appropriately via semver. When we are ready to publish to npm we can remove the `-prerelease`.
  * Thanks, you are all awesome human beings.
