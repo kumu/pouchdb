@@ -117,6 +117,20 @@ adapters.map(function (adapter) {
       });
     });
 
+    it('Modify a doc with sugar syntax and omit the _id', function (done) {
+      var db = new PouchDB(dbs.name);
+      db.post({test: 'somestuff'}, function (err, info) {
+        db.put({another: 'test', _id: info.id}, info.rev, function (err, info2) {
+          info.rev.should.not.equal(info2.rev);
+          db.put({yet_another: 'test'}, 'yet_another', function (err, info3) {
+            info3.id.should.equal('yet_another');
+            info.rev.should.not.equal(info2.rev);
+            done();
+          });
+        });
+      });
+    });
+
     it('Modify a doc with a promise', function (done) {
       var db = new PouchDB(dbs.name);
       db.post({test: 'promisestuff'}).then(function (info) {
@@ -148,23 +162,23 @@ adapters.map(function (adapter) {
       });
     });
 
-    it.skip('Close db', function (done) {
+    it('Close db', function (done) {
       new PouchDB(dbs.name, function (err, db) {
         db.close(done);
       });
     });
 
-    it.skip('Close db with a promise', function (done) {
+    it('Close db with a promise', function (done) {
       new PouchDB(dbs.name, function (err, db) {
         db.close().then(done, done);
       });
     });
 
-    it.skip('Read db id after closing Close', function (done) {
+    it('Read db id after closing Close', function (done) {
       new PouchDB(dbs.name, function (err, db) {
         db.close(function (error) {
           db = new PouchDB(dbs.name);
-          db.id(function (id) {
+          db.id(function (err, id) {
             id.should.be.a('string');
             done();
           });
@@ -263,7 +277,7 @@ adapters.map(function (adapter) {
     it('Remove doc, no callback', function (done) {
       var db = new PouchDB(dbs.name);
       var changes = db.changes({
-        continuous: true,
+        live: true,
         include_docs: true,
         onChange: function (change) {
           if (change.doc._deleted) {
@@ -403,8 +417,7 @@ adapters.map(function (adapter) {
       });
     });
 
-    // TODO: https://github.com/daleharvey/pouchdb/issues/1461
-    it.skip('Put doc without _id should fail', function (done) {
+    it('Put doc without _id should fail', function (done) {
       var db = new PouchDB(dbs.name);
       db.put({test: 'somestuff' }, function (err, info) {
         should.exist(err);
@@ -412,7 +425,7 @@ adapters.map(function (adapter) {
       });
     });
 
-    it.skip('Put doc with bad reserved id should fail', function (done) {
+    it('Put doc with bad reserved id should fail', function (done) {
       var db = new PouchDB(dbs.name);
       db.put({
         _id: '_i_test',
@@ -516,7 +529,30 @@ adapters.map(function (adapter) {
           db2.put(doc2, function () {
             db.allDocs(function (err, docs) {
               docs.total_rows.should.equal(2);
-              PouchDB.destroy(dbs.name, function () {
+              PouchDB.destroy(dbs.name, function (err) {
+                should.not.exist(err);
+                db2 = new PouchDB(dbs.name);
+                db2.get(doc._id, function (err, doc) {
+                  err.status.should.equal(404);
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+
+    it('Fail to fetch a doc after db was deleted', function (done) {
+      new PouchDB(dbs.name, function (err, db) {
+        var db2 = new PouchDB(dbs.name);
+        var doc = { _id: 'foodoc' };
+        var doc2 = { _id: 'foodoc2' };
+        db.put(doc, function () {
+          db2.put(doc2, function () {
+            db.allDocs(function (err, docs) {
+              docs.total_rows.should.equal(2);
+              db.destroy().then(function () {
                 db2 = new PouchDB(dbs.name);
                 db2.get(doc._id, function (err, doc) {
                   err.status.should.equal(404);

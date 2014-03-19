@@ -22,13 +22,15 @@ adapters.map(function (adapter) {
     it('All changes', function (done) {
       var db = new PouchDB(dbs.name);
       db.post({ test: 'somestuff' }, function (err, info) {
-        db.changes({
+        var promise = db.changes({
           onChange: function (change) {
             change.should.not.have.property('doc');
             change.should.have.property('seq');
             done();
           }
         });
+        should.exist(promise);
+        promise.cancel.should.be.a('function');
       });
     });
 
@@ -51,13 +53,15 @@ adapters.map(function (adapter) {
       ];
       var db = new PouchDB(dbs.name);
       db.bulkDocs({ docs: docs }, function (err, info) {
-        db.changes({
+        var promise = db.changes({
           since: 12,
           complete: function (err, results) {
             results.results.length.should.equal(2);
             done();
           }
         });
+        should.exist(promise);
+        promise.cancel.should.be.a('function');
       });
     });
 
@@ -194,7 +198,7 @@ adapters.map(function (adapter) {
       ];
       var db = new PouchDB(dbs.name);
       testUtils.writeDocs(db, docs, function (err, info) {
-        db.changes({
+        var promise = db.changes({
           filter: 'foo/even',
           limit: 2,
           since: 2,
@@ -210,6 +214,8 @@ adapters.map(function (adapter) {
             done();
           }
         });
+        should.exist(promise);
+        promise.cancel.should.be.a('function');
       });
     });
 
@@ -545,7 +551,7 @@ adapters.map(function (adapter) {
       });
     });
 
-    it('continuous-changes', function (done) {
+    it('live-changes', function (done) {
       var db = new PouchDB(dbs.name);
       var count = 0;
       var changes = db.changes({
@@ -559,7 +565,7 @@ adapters.map(function (adapter) {
           count.should.equal(1);
           changes.cancel();
         },
-        continuous: true
+        live: true
       });
       db.post({ test: 'adoc' });
     });
@@ -567,13 +573,17 @@ adapters.map(function (adapter) {
     it('Multiple watchers', function (done) {
       var db = new PouchDB(dbs.name);
       var count = 0;
+      var changes1Complete = false;
+      var changes2Complete = false;
       function checkCount() {
-        if (count === 2) {
+        if (changes1Complete && changes2Complete) {
+          count.should.equal(2);
           done();
         }
       }
       var changes1 = db.changes({
         complete: function () {
+          changes1Complete = true;
           checkCount();
         },
         onChange: function (change) {
@@ -581,10 +591,11 @@ adapters.map(function (adapter) {
           changes1.cancel();
           changes1 = null;
         },
-        continuous: true
+        live: true
       });
       var changes2 = db.changes({
         complete: function () {
+          changes2Complete = true;
           checkCount();
         },
         onChange: function (change) {
@@ -592,7 +603,7 @@ adapters.map(function (adapter) {
           changes2.cancel();
           changes2 = null;
         },
-        continuous: true
+        live: true
       });
       db.post({test: 'adoc'});
     });
@@ -609,7 +620,7 @@ adapters.map(function (adapter) {
           change.doc.should.have.property('_rev');
           changes.cancel();
         },
-        continuous: true,
+        live: true,
         include_docs: true
       });
       db.post({ test: 'adoc' });
@@ -618,30 +629,49 @@ adapters.map(function (adapter) {
     it('Cancel changes', function (done) {
       var db = new PouchDB(dbs.name);
       var count = 0;
+      var interval;
+      var docPosted = false;
+
+      // We want to wait for a period of time after the final
+      // document was posted to ensure we didnt see another
+      // change
+      function waitForDocPosted() {
+        if (!docPosted) {
+          return;
+        }
+        clearInterval(interval);
+        setTimeout(function () {
+          count.should.equal(1);
+          done();
+        }, 200);
+      }
+
       var changes = db.changes({
         complete: function (err, result) {
           result.status.should.equal('cancelled');
           // This setTimeout ensures that once we cancel a change we dont recieve
           // subsequent callbacks, so it is needed
-          setTimeout(function () {
-            count.should.equal(1);
-            done();
-          }, 200);
+          interval = setInterval(waitForDocPosted, 100);
         },
         onChange: function (change) {
           count += 1;
           if (count === 1) {
             changes.cancel();
-            db.post({ test: 'another doc' });
+            db.post({ test: 'another doc' }, function (err, res) {
+              if (err) {
+                return done(err);
+              }
+              docPosted = true;
+            });
           }
         },
-        continuous: true
+        live: true
       });
       db.post({ test: 'adoc' });
     });
 
     // TODO: https://github.com/daleharvey/pouchdb/issues/1460
-    it.skip('Kill database while listening to continuous changes', function (done) {
+    it.skip('Kill database while listening to live changes', function (done) {
       var db = new PouchDB(dbs.name);
       var count = 0;
       db.changes({
@@ -654,7 +684,7 @@ adapters.map(function (adapter) {
             PouchDB.destroy(dbs.name);
           }
         },
-        continuous: true
+        live: true
       });
       db.post({ test: 'adoc' });
     });
@@ -689,7 +719,7 @@ adapters.map(function (adapter) {
               changes.cancel();
             }
           },
-          continuous: true
+          live: true
         });
         db.bulkDocs({ docs: docs2 });
       });
@@ -729,13 +759,13 @@ adapters.map(function (adapter) {
               changes.cancel();
             }
           },
-          continuous: true
+          live: true
         });
         db.bulkDocs({ docs: docs2 });
       });
     });
 
-    it('Non-continuous changes filter', function (done) {
+    it('Non-live changes filter', function (done) {
       var docs1 = [
         {_id: '0', integer: 0},
         {_id: '1', integer: 1},
@@ -936,13 +966,15 @@ adapters.map(function (adapter) {
       var db = new PouchDB(dbs.name);
       db.bulkDocs({ docs: [{ foo: 'bar' }] }, function (err, data) {
         var changes = db.changes({
-          continuous: true,
+          live: true,
           onChange: function () { },
           complete: function (err, result) {
             result.status.should.equal('cancelled');
             done();
           }
         });
+        should.exist(changes);
+        changes.cancel.should.be.a('function');
         changes.cancel();
         db.close(function (error) {
           should.not.exist(error);
@@ -952,17 +984,42 @@ adapters.map(function (adapter) {
 
     it('fire-complete-on-cancel', function (done) {
       var db = new PouchDB(dbs.name);
+      var cancelled = false;
       var changes = db.changes({
-        continuous: true,
+        live: true,
         complete: function (err, result) {
+          cancelled.should.equal(true);
           should.not.exist(err);
-          result.status.should.equal('cancelled');
+          should.exist(result);
+          if (result) {
+            result.status.should.equal('cancelled');
+          }
           done();
         }
       });
+      should.exist(changes);
+      changes.cancel.should.be.a('function');
       setTimeout(function () {
+        cancelled = true;
         changes.cancel();
       }, 100);
+    });
+
+    it('changes are not duplicated', function (done) {
+      var db = new PouchDB(dbs.name);
+      var called = 0;
+      var changes = db.changes({
+        live: true,
+        onChange: function () {
+          called++;
+        },
+        complete: done
+      });
+      db.post({key: 'value'});
+      setTimeout(function () {
+        called.should.equal(1);
+        changes.cancel();
+      }, 1000);
     });
 
   });
@@ -983,5 +1040,3 @@ describe('changes-standalone', function () {
   });
 
 });
-
-

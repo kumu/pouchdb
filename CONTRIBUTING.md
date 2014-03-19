@@ -104,6 +104,12 @@ or
 
     $ COUCH_HOST=http://user:pass@myname.host.com npm test
 
+### Testing Pouch in a shell
+
+For quick debugging, you can run an interactive Node shell with the `PouchDB` variable already available:
+
+    npm run shell
+
 
 Git Essentials
 --------------------------------------
@@ -124,8 +130,7 @@ Building PouchDB Documentation
 
 The source for the website http://pouchdb.com is stored inside the `docs` directory of the PouchDB repository, you can make changes and submit pull requests as with any other patch. To build and view the website locally you will need to install [jekyll](http://jekyllrb.com/) then:
 
-    $ cd docs
-    $ jekyll -w serve
+    $ npm run build-site
 
 You should now find the documentation at http://127.0.0.1:4000
 
